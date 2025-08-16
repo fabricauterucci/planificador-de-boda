@@ -1,0 +1,1 @@
+"use strict";exports.id=467,exports.ids=[467],exports.modules={467:(a,b,c)=>{c.r(b),c.d(b,{default:()=>g});var d=c(8732);c(2015),c(5165);var e=c(893),f=c.n(e);function g({lat:a,lng:b}){return(0,d.jsx)("div",{id:"map",className:f().mapContainer})}}};

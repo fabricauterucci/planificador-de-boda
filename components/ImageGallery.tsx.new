@@ -1,0 +1,166 @@
+import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
+import styles from './galleryZoom.module.css';
+
+const images = [
+  { src: '/luna.jpeg', alt: 'Luna 1' },
+  { src: '/luna.webp', alt: 'Luna 2' },
+  { src: '/luna2.webp', alt: 'Luna 3' },
+  { src: '/luna3.webp', alt: 'Luna 4' },
+  { src: '/luna4.webp', alt: 'Luna 5' },
+  { src: '/luna5.webp', alt: 'Luna 6' },
+  { src: '/luna6.webp', alt: 'Luna 7' },
+];
+
+export default function ImageGallery() {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (!lightboxOpen) return;
+
+    switch (event.key) {
+      case 'Escape':
+        if (isZoomed) {
+          setIsZoomed(false);
+        } else {
+          setLightboxOpen(false);
+        }
+        break;
+      case 'ArrowLeft':
+        if (!isZoomed) {
+          setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+        }
+        break;
+      case 'ArrowRight':
+        if (!isZoomed) {
+          setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+        }
+        break;
+    }
+  }, [lightboxOpen, isZoomed]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  useEffect(() => {
+    if (lightboxOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+      setIsZoomed(false);
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [lightboxOpen]);
+
+  const toggleZoom = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsZoomed(prev => !prev);
+  }, []);
+
+  return (
+    <div className="my-16">
+      {/* Título de la galería */}
+      <h2 className="font-display text-3xl md:text-4xl text-center mb-8 text-dusk">Nuestra Galería</h2>
+      
+      {/* Grid de miniaturas */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {images.map((image, index) => (
+          <button
+            key={image.src}
+            className="aspect-[4/3] relative overflow-hidden rounded-lg cursor-pointer transform transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gold group"
+            onClick={() => {
+              setCurrentImageIndex(index);
+              setLightboxOpen(true);
+            }}
+          >
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors z-10" />
+            <Image
+              src={image.src}
+              alt={image.alt}
+              fill
+              sizes="(max-width: 768px) 50vw, 25vw"
+              quality={75}
+              className="object-cover"
+            />
+          </button>
+        ))}
+      </div>
+
+      {/* Lightbox */}
+      {lightboxOpen && (
+        <div 
+          className={`fixed inset-0 bg-black/95 z-50 flex items-center justify-center ${styles['lightbox-overlay']}`}
+          onClick={() => !isZoomed && setLightboxOpen(false)}
+        >
+          <div 
+            className={`relative max-w-[90vw] max-h-[90vh] ${styles['zoom-container']}`}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="relative aspect-[4/3] w-full">
+              <Image
+                src={images[currentImageIndex].src}
+                alt={images[currentImageIndex].alt}
+                fill
+                quality={100}
+                priority
+                sizes="90vw"
+                onClick={toggleZoom}
+                className={`object-contain transition-transform duration-300 cursor-zoom-in
+                  ${isZoomed ? 'scale-150 cursor-zoom-out' : ''}`}
+              />
+            </div>
+            
+            {/* Controles de navegación (solo visibles cuando no está haciendo zoom) */}
+            {!isZoomed && (
+              <>
+                <button
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1);
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                  </svg>
+                </button>
+                <button
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentImageIndex(prev => prev === images.length - 1 ? 0 : prev + 1);
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
+
+                {/* Botón de cerrar */}
+                <button
+                  className="absolute top-4 right-4 text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                  onClick={() => setLightboxOpen(false)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
+                {/* Indicador de imagen actual */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white bg-black/50 px-3 py-1 rounded-full text-sm">
+                  {currentImageIndex + 1} / {images.length}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

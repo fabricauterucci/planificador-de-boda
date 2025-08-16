@@ -1,0 +1,25 @@
+import Head from "next/head";
+import dynamic from "next/dynamic";
+import { useEffect, useState, useCallback } from 'react';
+import ParallaxSection from "@/components/ParallaxSection";
+import Countdown from "@/components/Countdown";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { useAuth } from "../lib/AuthContext";
+import { supabase } from '../lib/supabaseClient';
+import styles from "../components/menuZoom.module.css";
+import photosStyles from '../styles/photos.module.css';
+
+const Map = dynamic(() => import("@/components/Map"), { ssr: false });
+
+const EVENT_DATE = process.env.NEXT_PUBLIC_EVENT_DATE || "2025-10-18T18:00:00-03:00";
+
+const images = [
+  { src: '/luna.jpeg', alt: 'Luna 1' },
+  { src: '/luna.webp', alt: 'Luna 2' },
+  { src: '/luna2.webp', alt: 'Luna 3' },
+  { src: '/luna3.webp', alt: 'Luna 4' },
+  { src: '/luna4.webp', alt: 'Luna 5' },
+  { src: '/luna5.webp', alt: 'Luna 6' },
+  { src: '/luna6.webp', alt: 'Luna 7' },
+];

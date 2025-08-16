@@ -1,0 +1,59 @@
+export default function Home() {
+  const { isAuthenticated, user } = useAuth();
+  const [modal, setModal] = useState<HTMLElement | null>(null);
+  const [modalImg, setModalImg] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const modal = document.getElementById("myModal");
+    const modalImg = document.getElementById("img01") as HTMLImageElement;
+    setModal(modal);
+    setModalImg(modalImg);
+  }, []);
+
+  const openModal = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    const img = e.target as HTMLImageElement;
+    if (modal && modalImg) {
+      modal.style.display = "block";
+      modalImg.src = img.src;
+    }
+  }, [modal, modalImg]);
+
+  const closeModal = useCallback(() => {
+    if (modal) {
+      modal.style.display = "none";
+    }
+  }, [modal]);
+
+  return (
+    <>
+      <Head>
+        <title>Sofía & Franco</title>
+        <meta name="description" content="Wedding App" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+      <Navbar />
+      <main>
+        <ParallaxSection />
+        <Countdown eventDate={EVENT_DATE} />
+        <section className={photosStyles.galleryContainer}>
+          {images.map((img, index) => (
+            <img
+              key={index}
+              src={img.src}
+              alt={img.alt}
+              className={photosStyles.galleryImage}
+              onClick={openModal}
+            />
+          ))}
+          <div id="myModal" className={photosStyles.modal}>
+            <span className={photosStyles.close} onClick={closeModal}>&times;</span>
+            <img id="img01" className={photosStyles.modalContent} />
+          </div>
+        </section>
+        <Map />
+      </main>
+      <Footer />
+    </>
+  );
+}
