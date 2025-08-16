@@ -5,11 +5,6 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[build.environment]
-  NEXT_PUBLIC_SUPABASE_URL = "https://dgqgvnqzxkkhcooqcjax.supabase.co"
-  NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRncWd2bnF6eGtraGNvb3FjamF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNTA5MzEsImV4cCI6MjA3MDYyNjkzMX0.pVHrWV1oNYICreRuJuLmnUeLNHEV4pCudSctE4i4k4Y"
-  SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRncWd2bnF6eGtraGNvb3FjamF4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTA1MDkzMSwiZXhwIjoyMDcwNjI2OTMxfQ.wEalC4i2SlV0k_EBw6bFlY9ji9idM-PKQajgfbnzIfk"
-
 [dev]
   command = "npm run dev"
   port = 3000
