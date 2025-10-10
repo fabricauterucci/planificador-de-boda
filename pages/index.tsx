@@ -14,7 +14,7 @@ import imageZoomStyles from '../styles/imageZoom.module.css';
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 
-const EVENT_DATE = process.env.NEXT_PUBLIC_EVENT_DATE || "2025-10-18T18:00:00-03:00";
+const EVENT_DATE = process.env.NEXT_PUBLIC_EVENT_DATE || "2026-10-18T18:00:00-03:00";
 
 const images = [
   { src: '/luna.jpeg', alt: 'Luna 1' },
