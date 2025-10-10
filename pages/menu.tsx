@@ -1,0 +1,253 @@
+import Image from "next/image";
+import { useState } from "react";
+import Footer from "../components/Footer";
+
+export default function Menu() {
+  const [selectedMenu, setSelectedMenu] = useState<'clasico' | 'vegetariano' | 'vegano'>('clasico');
+
+  return (
+    <div className="min-h-screen bg-blush/5 bg-[url('/hero-bg.svg')] bg-cover bg-fixed bg-center w-full overflow-x-hidden relative">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 relative">
+        {/* Header Section */}
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gold/10 p-6 mb-8">
+          <div className="flex items-center gap-4 mb-6">
+            <a href="/" className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-gold text-white font-medium shadow-sm hover:bg-gold/90 transition-colors text-base">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+              Volver
+            </a>
+            <h1 className="text-4xl font-display tracking-wide text-dusk flex-1 text-center">Menú de la Boda</h1>
+          </div>
+
+          {/* Menu Selection Tabs */}
+          <div className="flex flex-wrap gap-3 justify-center">
+            <button
+              className={`px-6 py-2.5 rounded-full font-medium tracking-wide transition-all duration-200 text-base ${
+                selectedMenu === 'clasico' 
+                  ? 'bg-gold text-white shadow-md transform scale-105' 
+                  : 'bg-white text-dusk border-2 border-gold/30 hover:border-gold hover:bg-gold/5'
+              }`}
+              onClick={() => setSelectedMenu('clasico')}
+            >
+              Clásico Argentino
+            </button>
+            <button
+              className={`px-6 py-2.5 rounded-full font-medium tracking-wide transition-all duration-200 text-base ${
+                selectedMenu === 'vegetariano' 
+                  ? 'bg-gold text-white shadow-md transform scale-105' 
+                  : 'bg-white text-dusk border-2 border-gold/30 hover:border-gold hover:bg-gold/5'
+              }`}
+              onClick={() => setSelectedMenu('vegetariano')}
+            >
+              Vegetariano
+            </button>
+            <button
+              className={`px-6 py-2.5 rounded-full font-medium tracking-wide transition-all duration-200 text-base ${
+                selectedMenu === 'vegano' 
+                  ? 'bg-gold text-white shadow-md transform scale-105' 
+                  : 'bg-white text-dusk border-2 border-gold/30 hover:border-gold hover:bg-gold/5'
+              }`}
+              onClick={() => setSelectedMenu('vegano')}
+            >
+              Vegano
+            </button>
+          </div>
+        </div>
+
+        {selectedMenu === 'clasico' && (
+          <div>
+            <h2 className="font-extrabold text-2xl uppercase mb-4 text-[#C9A063] tracking-wider text-center">Entrada</h2>
+            <div className="flex flex-col gap-8 mb-12">
+              {/* Empanada tucumana */}
+              <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 bg-white/95 backdrop-blur-sm p-3 sm:p-6 rounded-2xl shadow-md border border-gold/10 animate-fade-in">
+                <div className="w-full md:w-1/2 relative aspect-video rounded-lg overflow-hidden shadow-lg">
+                  <Image
+                    src="/empanada tucumana.jpg"
+                    alt="Empanada tucumana"
+                    fill
+                    className="object-cover transition-transform duration-300 hover:scale-105"
+                    priority={false}
+                  />
+                </div>
+                <div className="w-full md:w-1/2 space-y-3">
+                  <h3 className="font-display text-2xl text-gold">Empanada tucumana</h3>
+                  <p className="text-dusk/80 leading-relaxed">Rellena de carne cortada a cuchillo, cebolla, huevo y condimentos, típica del noroeste argentino.</p>
+                </div>
+              </div>
+
+              {/* Empanada salteña */}
+              <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 bg-white/95 backdrop-blur-sm p-3 sm:p-6 rounded-2xl shadow-md border border-gold/10 animate-fade-in">
+                <div className="w-full md:w-1/2 relative aspect-video rounded-lg overflow-hidden shadow-lg">
+                  <Image
+                    src="/saltenya.jpg"
+                    alt="Empanada salteña"
+                    fill
+                    className="object-cover transition-transform duration-300 hover:scale-105"
+                    priority={false}
+                  />
+                </div>
+                <div className="w-full md:w-1/2 space-y-3">
+                  <h3 className="font-display text-2xl text-gold">Empanada salteña</h3>
+                  <p className="text-dusk/80 leading-relaxed">Rellena de carne jugosa, papa, cebolla de verdeo, huevo y ají molido, tradicional de Salta.</p>
+                </div>
+              </div>
+
+              {/* Empanada santiagueña */}
+              <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 bg-white/95 backdrop-blur-sm p-3 sm:p-6 rounded-2xl shadow-md border border-gold/10 animate-fade-in">
+                <div className="w-full md:w-1/2 relative aspect-video rounded-lg overflow-hidden shadow-lg">
+                  <Image
+                    src="/saltenya2.jpg"
+                    alt="Empanada santiagueña"
+                    fill
+                    className="object-cover transition-transform duration-300 hover:scale-105"
+                    priority={false}
+                  />
+                </div>
+                <div className="w-full md:w-1/2 space-y-3">
+                  <h3 className="font-display text-2xl text-gold">Empanada santiagueña</h3>
+                  <p className="text-dusk/80 leading-relaxed">Rellena de carne, cebolla, huevo y especias, con masa fina y crocante, típica de Santiago del Estero.</p>
+                </div>
+              </div>
+            </div>
+
+            <h2 className="font-extrabold text-2xl uppercase mb-4 text-[#C9A063] tracking-wider text-center">Plato principal</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 mb-12 bg-white/95 backdrop-blur-sm p-3 sm:p-6 rounded-2xl shadow-md border border-gold/10 animate-fade-in">
+              <div className="w-full md:w-1/2 relative aspect-video rounded-lg overflow-hidden shadow-lg">
+                <Image
+                  src="/asado.png"
+                  alt="Asado argentino"
+                  fill
+                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  priority={false}
+                />
+              </div>
+              <div className="w-full md:w-1/2 space-y-3">
+                <h3 className="font-display text-2xl text-gold">Asado Argentino</h3>
+                <p className="text-dusk/80 leading-relaxed">
+                  Un clásico argentino en asado incluye una selección de cortes de carne como tira de asado, vacío, y achuras (chorizo, morcilla, chinchulines, mollejas), acompañados de chimichurri, criolla y pan, cocinados a la parrilla con leña.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedMenu === 'vegetariano' && (
+          <div>
+            <h2 className="font-extrabold text-2xl uppercase mb-4 text-[#C9A063] tracking-wider text-center">Menú vegetariano 1</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 mb-8 bg-white/95 backdrop-blur-sm p-3 sm:p-6 rounded-2xl shadow-md border border-gold/10 animate-fade-in">
+              <div className="w-full md:w-1/2 relative aspect-video rounded-lg overflow-hidden shadow-lg">
+                <Image
+                  src="/lasagna.webp"
+                  alt="Lasaña de verduras con bechamel vegetal"
+                  fill
+                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  priority={false}
+                />
+              </div>
+              <div className="w-full md:w-1/2 space-y-3">
+                <h3 className="font-display text-2xl text-gold">Lasaña de verduras con bechamel vegetal</h3>
+                <p className="text-dusk/80 leading-relaxed">Láminas de pasta intercaladas con berenjena asada, calabacín, espinaca, salsa de tomate casera y bechamel vegetal cremosa. Gratinada al horno, 100% vegetariana.</p>
+              </div>
+            </div>
+
+            <h2 className="font-extrabold text-2xl uppercase mb-4 text-[#C9A063] tracking-wider text-center">Menú vegetariano 2</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 mb-8 bg-white/95 backdrop-blur-sm p-3 sm:p-6 rounded-2xl shadow-md border border-gold/10 animate-fade-in">
+              <div className="w-full md:w-1/2 relative aspect-video rounded-lg overflow-hidden shadow-lg">
+                <Image
+                  src="/risotto.webp"
+                  alt="Risotto de setas y trufa"
+                  fill
+                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  priority={false}
+                />
+              </div>
+              <div className="w-full md:w-1/2 space-y-3">
+                <h3 className="font-display text-2xl text-gold">Risotto de setas y trufa</h3>
+                <p className="text-dusk/80 leading-relaxed">Arroz cremoso con variedad de hongos y un toque de aceite de trufa, terminado con parmesano.</p>
+              </div>
+            </div>
+
+            <h2 className="font-extrabold text-2xl uppercase mb-4 text-[#C9A063] tracking-wider text-center">Menú vegetariano 3</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 mb-12 bg-white/95 backdrop-blur-sm p-3 sm:p-6 rounded-2xl shadow-md border border-gold/10 animate-fade-in">
+              <div className="w-full md:w-1/2 relative aspect-video rounded-lg overflow-hidden shadow-lg">
+                <Image
+                  src="/canelones.jpg"
+                  alt="Canelones de espinacas, ricotta y nueces"
+                  fill
+                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  priority={false}
+                />
+              </div>
+              <div className="w-full md:w-1/2 space-y-3">
+                <h3 className="font-display text-2xl text-gold">Canelones de espinacas, ricotta y nueces</h3>
+                <p className="text-dusk/80 leading-relaxed">Pasta rellena de espinaca fresca, ricotta cremosa y nueces, gratinados al horno con salsa suave.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedMenu === 'vegano' && (
+          <div>
+            {/* Mediterránea */}
+            <h2 className="font-extrabold text-2xl uppercase mb-4 text-[#C9A063] tracking-wider text-center">Menú vegano 1</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 mb-8 bg-white/95 backdrop-blur-sm p-3 sm:p-6 rounded-2xl shadow-md border border-gold/10 animate-fade-in">
+              <div className="w-full md:w-1/2 relative aspect-video rounded-lg overflow-hidden shadow-lg">
+                <Image
+                  src="/mediterranea.jpeg"
+                  alt="Ensalada mediterránea vegana"
+                  fill
+                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  priority={false}
+                />
+              </div>
+              <div className="w-full md:w-1/2 space-y-3">
+                <h3 className="font-display text-2xl text-gold">Ensalada mediterránea vegana</h3>
+                <p className="text-dusk/80 leading-relaxed">Mix de hojas verdes, tomates cherry, aceitunas negras, pepino, cebolla morada, garbanzos, albahaca fresca y vinagreta de limón.</p>
+              </div>
+            </div>
+
+            {/* Falafel */}
+            <h2 className="font-extrabold text-2xl uppercase mb-4 text-[#C9A063] tracking-wider text-center">Menú vegano 2</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 mb-8 bg-white/95 backdrop-blur-sm p-3 sm:p-6 rounded-2xl shadow-md border border-gold/10 animate-fade-in">
+              <div className="w-full md:w-1/2 relative aspect-video rounded-lg overflow-hidden shadow-lg">
+                <Image
+                  src="/falafel.webp"
+                  alt="Falafel con tabule y salsa tahini"
+                  fill
+                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  priority={false}
+                />
+              </div>
+              <div className="w-full md:w-1/2 space-y-3">
+                <h3 className="font-display text-2xl text-gold">Falafel con tabule y salsa tahini</h3>
+                <p className="text-dusk/80 leading-relaxed">Falafel de garbanzos, tabule de perejil, tomate y trigo burgol, acompañado de salsa tahini.</p>
+              </div>
+            </div>
+
+            {/* Zapallo */}
+            <h2 className="font-extrabold text-2xl uppercase mb-4 text-[#C9A063] tracking-wider text-center">Menú vegano 3</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 mb-12 bg-white/95 backdrop-blur-sm p-3 sm:p-6 rounded-2xl shadow-md border border-gold/10 animate-fade-in">
+              <div className="w-full md:w-1/2 relative aspect-video rounded-lg overflow-hidden shadow-lg">
+                <Image
+                  src="/zapallo.webp"
+                  alt="Sopa de zapallo con leche de coco"
+                  fill
+                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  priority={false}
+                />
+              </div>
+              <div className="w-full md:w-1/2 space-y-3">
+                <h3 className="font-display text-2xl text-gold">Sopa de zapallo con leche de coco</h3>
+                <p className="text-dusk/80 leading-relaxed">Sopa cremosa de zapallo asado, leche de coco, jengibre y especias suaves, terminada con semillas tostadas.</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Footer */}
+      <Footer />
+    </div>
+  );
+}

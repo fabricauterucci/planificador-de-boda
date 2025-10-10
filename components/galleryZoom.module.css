@@ -1,0 +1,28 @@
+.zoom-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.zoom-img {
+  transition: transform 0.3s ease-in-out;
+  cursor: zoom-in;
+}
+
+.zoomed {
+  transform: scale(1.75);
+  cursor: zoom-out;
+}
+
+/* Clase para el overlay del lightbox */
+.lightbox-overlay {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

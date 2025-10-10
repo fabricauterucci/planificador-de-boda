@@ -1,0 +1,252 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../lib/supabaseClient';
+import type { AuthError } from '@supabase/supabase-js';
+import type { PostgrestError } from '@supabase/supabase-js';
+
+interface TableInfo {
+  schemaname: string;
+  tablename: string;
+}
+
+interface DebugInfo {
+  userInfo: any;
+  rsvpInfo: any[];
+  tables: TableInfo[];
+  loading: boolean;
+  error: string | null;
+}
+
+export default function RSVPDebug() {
+  const { token, role } = useAuth();
+  const [debugInfo, setDebugInfo] = useState<DebugInfo>({
+    userInfo: null,
+    rsvpInfo: [],
+    tables: [],
+    loading: true,
+    error: null
+  });
+
+  useEffect(() => {
+    async function loadDebugInfo() {
+      try {
+        // Obtener información del usuario
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError as AuthError;
+
+        // Comprobar existencia de tablas
+        const { data: tableData, error: tableError } = await supabase
+          .from('pg_catalog.pg_tables')
+          .select('schemaname, tablename')
+          .eq('schemaname', 'public')
+          .in('tablename', ['users', 'rsvp', 'menus']);
+        
+        if (tableError) {
+          console.error("Error obteniendo tablas:", tableError);
+        }
+
+        // Buscar RSVP del usuario
+        let rsvpData: any[] = [];
+        let rsvpError: PostgrestError | null = null;
+        if (user) {
+          const result = await supabase
+            .from('rsvp')
+            .select('*')
+            .eq('user_id', user.id);
+          
+          rsvpData = result.data || [];
+          rsvpError = result.error;
+        }
+
+        const errorMessage = userError ? (userError as AuthError).message : 
+          rsvpError ? rsvpError.message : null;
+
+        setDebugInfo({
+          userInfo: user,
+          rsvpInfo: rsvpData,
+          tables: tableData as TableInfo[] || [],
+          loading: false,
+          error: errorMessage
+        });
+      } catch (err) {
+        console.error("Error en debug:", err);
+        setDebugInfo(prev => ({
+          ...prev,
+          loading: false,
+          error: err instanceof Error ? err.message : 'Error desconocido'
+        }));
+      }
+    }
+
+    loadDebugInfo();
+  }, []);
+
+  // Función para crear un RSVP de prueba
+  async function createTestRSVP() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return alert('No hay usuario autenticado');
+
+      // Primero verifica si el usuario ya tiene un RSVP
+      const { data: existingRsvp, error: checkError } = await supabase
+        .from('rsvp')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      let result;
+      if (existingRsvp) {
+        // Actualizar RSVP existente
+        result = await supabase
+          .from('rsvp')
+          .update({
+            asistencia: 'asistire',
+            menu: 'Clasico Argentino',
+            comentario: 'Prueba desde debug - actualizado ' + new Date().toISOString()
+          })
+          .eq('user_id', user.id);
+      } else {
+        // Insertar nuevo RSVP
+        result = await supabase
+          .from('rsvp')
+          .insert({
+            user_id: user.id,
+            asistencia: 'asistire',
+            menu: 'Clasico Argentino',
+            comentario: 'Prueba desde debug - creado ' + new Date().toISOString()
+          });
+      }
+
+      if (result.error) {
+        console.error("Error en operación RSVP:", result.error);
+        throw result.error;
+      }
+      
+      // Verificar que se guardó correctamente
+      const { data: verificacion, error: errorVerificacion } = await supabase
+        .from('rsvp')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (errorVerificacion) {
+        console.error("Error al verificar RSVP:", errorVerificacion);
+        alert(`RSVP enviado pero no se pudo verificar: ${errorVerificacion.message}`);
+      } else {
+        console.log("Verificación exitosa:", verificacion);
+        alert('RSVP de prueba guardado correctamente');
+      }
+      
+      window.location.reload();
+    } catch (err) {
+      console.error("Error creando RSVP de prueba:", err);
+      const message = err instanceof Error ? err.message : 'Error desconocido';
+      alert(`Error: ${message}`);
+    }
+  }
+
+  // Función para crear la tabla RSVP
+  async function createRSVPTable() {
+    try {
+      const sql = `
+      CREATE TABLE IF NOT EXISTS public.rsvp (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        asistencia TEXT NOT NULL CHECK (asistencia IN ('asistire', 'no_puedo_ir')),
+        menu TEXT,
+        comentario TEXT,
+        UNIQUE(user_id)
+      );
+      ALTER TABLE public.rsvp ENABLE ROW LEVEL SECURITY;
+      CREATE POLICY "Usuario puede ver su propio RSVP" ON public.rsvp FOR SELECT USING (auth.uid() = user_id);
+      CREATE POLICY "Usuario puede crear su propio RSVP" ON public.rsvp FOR INSERT WITH CHECK (auth.uid() = user_id);
+      CREATE POLICY "Usuario puede actualizar su propio RSVP" ON public.rsvp FOR UPDATE USING (auth.uid() = user_id);
+      CREATE POLICY "Admins pueden ver todos los RSVPs" ON public.rsvp FOR SELECT USING (auth.jwt() ->> 'role' = 'admin' OR auth.jwt() ->> 'role' = 'prometidos');
+      `;
+      
+      alert('Esta función debe ejecutarse en el SQL Editor de Supabase. El SQL ha sido copiado al portapapeles.');
+      await navigator.clipboard.writeText(sql);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error desconocido';
+      alert(`Error: ${message}`);
+    }
+  }
+
+  if (debugInfo.loading) return <div className="p-8">Cargando información de debugging...</div>;
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Debugging RSVP</h1>
+      
+      {debugInfo.error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <h3 className="font-bold">Error:</h3>
+          <p>{debugInfo.error}</p>
+        </div>
+      )}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4">Usuario</h2>
+          {debugInfo.userInfo ? (
+            <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-60">
+              {JSON.stringify(debugInfo.userInfo, null, 2)}
+            </pre>
+          ) : (
+            <p className="text-red-600">No hay usuario autenticado</p>
+          )}
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4">RSVP</h2>
+          {debugInfo.rsvpInfo && debugInfo.rsvpInfo.length > 0 ? (
+            <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-60">
+              {JSON.stringify(debugInfo.rsvpInfo, null, 2)}
+            </pre>
+          ) : (
+            <p className="text-yellow-600">No hay RSVP para este usuario</p>
+          )}
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow md:col-span-2">
+          <h2 className="text-xl font-bold mb-4">Tablas en la Base de Datos</h2>
+          {debugInfo.tables.length > 0 ? (
+            <ul className="grid grid-cols-3 gap-2">
+              {debugInfo.tables.map((table, i) => (
+                <li key={i} className="bg-gray-100 p-2 rounded">
+                  {table.schemaname}.{table.tablename}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-yellow-600">No se encontraron tablas o no tienes acceso</p>
+          )}
+        </div>
+      </div>
+      
+      <div className="mt-8 flex gap-4">
+        <button 
+          onClick={createTestRSVP}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Crear RSVP de Prueba
+        </button>
+        
+        <button 
+          onClick={createRSVPTable}
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+        >
+          Copiar SQL para Crear Tabla RSVP
+        </button>
+        
+        <a 
+          href="/rsvp"
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 inline-block"
+        >
+          Ir a RSVP
+        </a>
+      </div>
+    </div>
+  );
+}
