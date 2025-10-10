@@ -2,7 +2,7 @@ export default function Footer() {
   return (
     <footer className="py-10 text-center text-sm opacity-70">
       <div className="mb-4">
-        Con amor — Sofía & Franco · 18 de Octubre de 2025
+        Con amor — Sofía & Franco · 18 de Octubre de 2026
       </div>
       <div className="flex items-center justify-center gap-2 text-xs opacity-60">
         <span>Hecho con</span>

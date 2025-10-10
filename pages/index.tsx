@@ -128,7 +128,7 @@ export default function Home() {
         <ParallaxSection bg="/hero-bg.svg">
           <div className="text-center">
             <h1 className="font-display text-4xl md:text-6xl">Sofía & Franco</h1>
-            <p className="mt-2 text-lg md:text-xl opacity-80">Buenos Aires — 18 de Octubre de 2025 · 18:00 hs</p>
+            <p className="mt-2 text-lg md:text-xl opacity-80">Buenos Aires — 18 de Octubre de 2026 · 18:00 hs</p>
             <div className="mt-6">
               <Countdown date={EVENT_DATE} />
             </div>
