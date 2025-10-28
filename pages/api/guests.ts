@@ -150,10 +150,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating RSVP:', error);
+        throw new Error(`Error de Supabase: ${error.message} (${error.code})`);
+      }
 
       return res.json({ ok: true, rsvp: updatedRsvp });
     } catch (error: any) {
+      console.error('PUT /api/guests error:', error);
       return res.status(500).json({ error: error.message });
     }
   }

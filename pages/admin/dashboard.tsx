@@ -92,17 +92,40 @@ export default function AdminDashboard() {
   // Función para guardar cambios usando la API /api/guests
   const handleEditSave = async (invitado: any) => {
     try {
-      // Intentar obtener token de localStorage o de Supabase session
+      // Intentar obtener token JWT de la API /api/auth/login
       let token = localStorage.getItem('auth_token');
       
+      // Si no hay token JWT, necesitamos generarlo
       if (!token) {
         const session = await supabase.auth.getSession();
-        token = session.data.session?.access_token || null;
-      }
+        const userEmail = session.data.session?.user?.email;
+        
+        if (!userEmail) {
+          alert('No se pudo obtener el email del usuario. Por favor inicia sesión nuevamente.');
+          return;
+        }
 
-      if (!token) {
-        alert('No hay token de autenticación. Por favor inicia sesión nuevamente.');
-        return;
+        // Generar token JWT usando la API de login
+        const loginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userEmail,
+            password: userEmail, // En tu mock, la password no se valida
+            role: role || 'admin'
+          })
+        });
+
+        if (!loginResponse.ok) {
+          alert('Error al generar token de autenticación');
+          return;
+        }
+
+        const { token: newToken } = await loginResponse.json();
+        token = newToken;
+        if (token) {
+          localStorage.setItem('auth_token', token);
+        }
       }
 
       const response = await fetch('/api/guests', {
