@@ -8,6 +8,16 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# Forzar Node.js runtime para compatibilidad con Supabase
+[functions]
+  node_bundler = "esbuild"
+  
+# Configuración para API Routes
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
 [dev]
   command = "npm run dev"
   port = 3000

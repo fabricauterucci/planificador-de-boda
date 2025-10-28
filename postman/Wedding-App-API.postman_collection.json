@@ -1,0 +1,282 @@
+{
+  "info": {
+    "name": "Wedding App API - Production",
+    "description": "Colección de endpoints para la versión de PRODUCCIÓN de la aplicación de bodas con Next.js y Supabase",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login - Invitado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set(\"auth_token\", jsonData.token);",
+                  "    pm.environment.set(\"user_role\", jsonData.role);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"invitado@ejemplo.com\",\n  \"password\": \"password123\",\n  \"role\": \"invitado\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login como invitado. El token se guarda automáticamente en las variables de entorno."
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Prometido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set(\"auth_token\", jsonData.token);",
+                  "    pm.environment.set(\"user_role\", jsonData.role);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"prometido@ejemplo.com\",\n  \"password\": \"password123\",\n  \"role\": \"prometidos\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login como prometido (acceso completo a invitados). El token se guarda automáticamente."
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set(\"auth_token\", jsonData.token);",
+                  "    pm.environment.set(\"user_role\", jsonData.role);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@ejemplo.com\",\n  \"password\": \"password123\",\n  \"role\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login como admin (acceso completo). El token se guarda automáticamente."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Event",
+      "item": [
+        {
+          "name": "Get Event Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/event",
+              "host": ["{{base_url}}"],
+              "path": ["api", "event"]
+            },
+            "description": "Obtiene la información del evento (nombre, fecha, lugar, coordenadas)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Guests",
+      "item": [
+        {
+          "name": "Get Guests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/guests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "guests"]
+            },
+            "description": "Obtiene la lista de invitados. Requiere autenticación. Los invitados solo ven su propio RSVP, prometidos y admin ven la lista completa."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Guest (RSVP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Carlos Rodríguez\",\n  \"attending\": true,\n  \"menu\": \"Clasico Argentino\",\n  \"allergies\": \"Ninguna\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/guests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "guests"]
+            },
+            "description": "Agrega un nuevo invitado / confirmación de asistencia (RSVP). Requiere autenticación. El email se toma del token JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Update RSVP",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ana López\",\n  \"attending\": true,\n  \"menu\": \"Vegano\",\n  \"allergies\": \"Gluten\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/guests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "guests"]
+            },
+            "description": "Permite a un invitado actualizar su RSVP (menú, asistencia, alergias). Requiere autenticación y busca por email del usuario autenticado."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Guest (Admin Only)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"invitado@ejemplo.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/guests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "guests"]
+            },
+            "description": "Elimina un invitado del sistema usando email en BODY (JSON). Solo admin puede ejecutar esta acción. Requiere autenticación con rol admin."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Menu",
+      "item": [
+        {
+          "name": "Get Menu Options",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/menu",
+              "host": ["{{base_url}}"],
+              "path": ["api", "menu"]
+            },
+            "description": "Obtiene las opciones de menú disponibles"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://plan-boda.netlify.app",
+      "type": "string"
+    }
+  ]
+}
