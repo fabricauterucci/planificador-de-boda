@@ -243,7 +243,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": \"98a960ef-0b29-486f-b378-b3eed27ffd12\",\n  \"menu\": \"Clásico Argentino\"\n}"
+              "raw": "{\n  \"user_id\": \"98a960ef-0b29-486f-b378-b3eed27ffd12\",\n  \"menu\": \"Clásico Argentino\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/guests",
@@ -271,7 +276,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": \"62faf9e2-8e49-40e0-a543-24aa92dcd0dd\",\n  \"menu\": \"Vegano\",\n  \"comentario\": \"Sin gluten por favor\"\n}"
+              "raw": "{\n  \"user_id\": \"62faf9e2-8e49-40e0-a543-24aa92dcd0dd\",\n  \"menu\": \"Vegano\",\n  \"comentario\": \"Sin gluten por favor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/guests",
@@ -299,7 +309,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": \"62faf9e2-8e49-40e0-a543-24aa92dcd0dd\"\n}"
+              "raw": "{\n  \"user_id\": \"62faf9e2-8e49-40e0-a543-24aa92dcd0dd\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/guests",
