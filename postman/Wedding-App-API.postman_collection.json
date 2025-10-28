@@ -227,48 +227,58 @@
           "response": []
         },
         {
-          "name": "Update RSVP (PUT)",
+          "name": "Update RSVP (PUT) - Admin Only",
           "request": {
             "method": "PUT",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Ana López\",\n  \"attending\": true,\n  \"menu\": \"Vegano\",\n  \"allergies\": \"Gluten\"\n}"
+              "raw": "{\n  \"user_id\": \"98a960ef-0b29-486f-b378-b3eed27ffd12\",\n  \"menu\": \"Clásico Argentino\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/guests",
               "host": ["{{base_url}}"],
               "path": ["api", "guests"]
             },
-            "description": "Permite a un invitado actualizar su RSVP (menú, asistencia, alergias). No requiere autenticación - busca por nombre."
+            "description": "Admin puede actualizar el menú de un invitado. Requiere user_id (UUID) y menu. NO se puede cambiar asistencia."
           },
           "response": []
         },
         {
-          "name": "Update RSVP - Change to Not Attending",
+          "name": "Update RSVP - Example 2",
           "request": {
             "method": "PUT",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Diego Pérez\",\n  \"attending\": true,\n  \"menu\": \"Clasico Argentino\",\n  \"allergies\": \"Ninguna\"\n}"
+              "raw": "{\n  \"user_id\": \"62faf9e2-8e49-40e0-a543-24aa92dcd0dd\",\n  \"menu\": \"Vegano\",\n  \"comentario\": \"Sin gluten por favor\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/guests",
               "host": ["{{base_url}}"],
               "path": ["api", "guests"]
             },
-            "description": "Ejemplo: Diego cambia su RSVP de 'no asiste' a 'sí asiste'."
+            "description": "Ejemplo: Admin cambia menú a Vegano con comentario adicional."
           },
           "response": []
         },
@@ -289,14 +299,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"invitado@ejemplo.com\"\n}"
+              "raw": "{\n  \"user_id\": \"62faf9e2-8e49-40e0-a543-24aa92dcd0dd\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/guests",
               "host": ["{{base_url}}"],
               "path": ["api", "guests"]
             },
-            "description": "Elimina un invitado del sistema usando email en BODY (JSON). Solo admin puede ejecutar esta acción. Requiere autenticación con rol admin."
+            "description": "Elimina un invitado del sistema usando user_id (UUID). Solo admin puede ejecutar esta acción."
           },
           "response": []
         },

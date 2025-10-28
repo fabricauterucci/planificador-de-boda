@@ -108,22 +108,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === "PUT") {
     console.log('[API /api/guests] PUT - Iniciando edición');
-    console.log('[API /api/guests] Body recibido:', req.body);
+    console.log('[API /api/guests] Body completo:', JSON.stringify(req.body, null, 2));
     console.log('[API /api/guests] Body type:', typeof req.body);
+    console.log('[API /api/guests] Body keys:', Object.keys(req.body || {}));
     
     try {
       // Admin solo puede editar el menú, NO la asistencia
       const { menu, comentario, user_id } = req.body as any;
       
-      console.log('[API /api/guests] Parsed:', { 
-        menu, 
-        comentario, 
-        user_id 
+      console.log('[API /api/guests] Valores extraídos:', { 
+        menu,
+        menuType: typeof menu,
+        comentario,
+        comentarioType: typeof comentario,
+        user_id,
+        userIdType: typeof user_id
       });
       
       if (!user_id) {
-        console.log('[API /api/guests] user_id requerido');
-        return res.status(400).json({ error: "user_id requerido" });
+        console.log('[API /api/guests] ❌ user_id está vacío/undefined/null');
+        console.log('[API /api/guests] Body raw:', req.body);
+        return res.status(400).json({ 
+          error: "user_id requerido",
+          received: { menu, comentario, user_id },
+          bodyKeys: Object.keys(req.body || {})
+        });
       }
       
       // Validar que al menos menu esté presente
