@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Wedding App API - Production",
-    "description": "Colección de endpoints para la versión de PRODUCCIÓN de la aplicación de bodas con Next.js y Supabase",
+    "name": "Wedding App API",
+    "description": "Colección de endpoints para la aplicación de bodas con Next.js y Supabase",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -147,7 +147,7 @@
       "name": "Guests",
       "item": [
         {
-          "name": "Get Guests",
+          "name": "Get Guests (Authenticated)",
           "request": {
             "method": "GET",
             "header": [
@@ -162,7 +162,21 @@
               "host": ["{{base_url}}"],
               "path": ["api", "guests"]
             },
-            "description": "Obtiene la lista de invitados. Requiere autenticación. Los invitados solo ven su propio RSVP, prometidos y admin ven la lista completa."
+            "description": "Obtiene la lista de invitados. Requiere autenticación. Los invitados solo ven el count, prometidos y admin ven la lista completa."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Guests (Sin Auth - 401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/guests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "guests"]
+            },
+            "description": "Prueba sin autenticación - debería retornar 401 Unauthorized"
           },
           "response": []
         },
@@ -174,11 +188,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{auth_token}}",
-                "type": "text"
               }
             ],
             "body": {
@@ -190,23 +199,41 @@
               "host": ["{{base_url}}"],
               "path": ["api", "guests"]
             },
-            "description": "Agrega un nuevo invitado / confirmación de asistencia (RSVP). Requiere autenticación. El email se toma del token JWT."
+            "description": "Agrega un nuevo invitado / confirmación de asistencia (RSVP)"
           },
           "response": []
         },
         {
-          "name": "Update RSVP",
+          "name": "Add Guest - Validation Error",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/guests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "guests"]
+            },
+            "description": "Prueba de validación - datos incompletos deberían retornar 400"
+          },
+          "response": []
+        },
+        {
+          "name": "Update RSVP (PUT)",
           "request": {
             "method": "PUT",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{auth_token}}",
-                "type": "text"
               }
             ],
             "body": {
@@ -218,7 +245,30 @@
               "host": ["{{base_url}}"],
               "path": ["api", "guests"]
             },
-            "description": "Permite a un invitado actualizar su RSVP (menú, asistencia, alergias). Requiere autenticación y busca por email del usuario autenticado."
+            "description": "Permite a un invitado actualizar su RSVP (menú, asistencia, alergias). No requiere autenticación - busca por nombre."
+          },
+          "response": []
+        },
+        {
+          "name": "Update RSVP - Change to Not Attending",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Diego Pérez\",\n  \"attending\": true,\n  \"menu\": \"Clasico Argentino\",\n  \"allergies\": \"Ninguna\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/guests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "guests"]
+            },
+            "description": "Ejemplo: Diego cambia su RSVP de 'no asiste' a 'sí asiste'."
           },
           "response": []
         },
@@ -247,6 +297,61 @@
               "path": ["api", "guests"]
             },
             "description": "Elimina un invitado del sistema usando email en BODY (JSON). Solo admin puede ejecutar esta acción. Requiere autenticación con rol admin."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Guest - Query Params (Recomendado)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/guests?email=test@ejemplo.com",
+              "host": ["{{base_url}}"],
+              "path": ["api", "guests"],
+              "query": [
+                {
+                  "key": "email",
+                  "value": "test@ejemplo.com",
+                  "description": "Email del invitado a eliminar"
+                }
+              ]
+            },
+            "description": "Elimina un invitado del sistema usando email en QUERY PARAMS. Este método es más compatible con algunos clientes HTTP. Solo admin puede ejecutar esta acción."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Guest - Forbidden (Non-Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"prometido@ejemplo.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/guests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "guests"]
+            },
+            "description": "Demuestra que solo admin puede eliminar. Ejecuta primero 'Login - Prometido' o 'Login - Invitado' para ver error 403."
           },
           "response": []
         }
