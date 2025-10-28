@@ -1,43 +1,32 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { verifyToken } from "@/lib/auth";
-import { supabase } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseClient";
 
 // Forzar Node.js runtime (necesario para Supabase)
 export const runtime = "nodejs";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  console.log(`[API /api/guests] ${req.method} request received`);
+  
   const user = verifyToken<{ email: string }>(req);
-  if (!user) return res.status(401).json({ error: "Unauthorized" });
+  if (!user) {
+    console.log('[API /api/guests] Unauthorized - no valid token');
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  
+  console.log(`[API /api/guests] User authenticated: ${user.email} (${user.role})`);
 
   if (req.method === "GET") {
     try {
-      // Si es invitado, devolver su RSVP (por user_id) si existe
-      if (user.role === "invitado") {
-        // Buscar el user_id del invitado por su email
-        const { data: userData } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', user.email)
-          .single();
-
-        if (!userData) {
-          return res.json({ role: user.role, guest: null });
-        }
-
-        // Buscar su RSVP
-        const { data: rsvpData } = await supabase
-          .from('rsvp')
-          .select('*, users!inner(nombre, email)')
-          .eq('user_id', userData.id)
-          .single();
-
-        return res.json({ role: user.role, guest: rsvpData });
+      // Solo admin y prometidos pueden ver la lista completa
+      if (user.role !== "admin" && user.role !== "prometidos") {
+        return res.status(403).json({ error: "No autorizado" });
       }
 
-      // prometidos y admin ven todo
-      const { data: allGuests } = await supabase
+      // Devolver todos los RSVPs con JOIN a users
+      const { data: allGuests } = await supabaseAdmin
         .from('rsvp')
-        .select('*, users!inner(nombre, email, rol)')
+        .select('*, users!inner(nombre, rol)')
         .order('created_at', { ascending: false });
 
       return res.json({ role: user.role, guests: allGuests });
@@ -48,29 +37,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === "POST") {
     try {
-      // Crear RSVP (solo si no existe para ese email)
-      const { name, attending, menu, allergies } = req.body as any;
-      
-      if (!name || typeof attending !== "boolean" || !menu) {
-        return res.status(400).json({ error: "Datos inválidos" });
+      // Crear RSVP - Solo admin puede crear desde esta API
+      if (user.role !== "admin") {
+        return res.status(403).json({ error: "Solo admin puede crear invitados desde esta API" });
       }
-
-      // Buscar el user_id del usuario actual
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', user.email)
-        .single();
-
-      if (!userData) {
-        return res.status(404).json({ error: "Usuario no encontrado" });
+      
+      const { user_id, asistencia, menu, comentario } = req.body as any;
+      
+      if (!user_id) {
+        return res.status(400).json({ error: "user_id requerido" });
       }
 
       // Verificar si ya existe RSVP
-      const { data: existing } = await supabase
+      const { data: existing } = await supabaseAdmin
         .from('rsvp')
         .select('id')
-        .eq('user_id', userData.id)
+        .eq('user_id', user_id)
         .single();
 
       if (existing) {
@@ -78,13 +60,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Crear RSVP
-      const { data: newRsvp, error } = await supabase
+      const { data: newRsvp, error } = await supabaseAdmin
         .from('rsvp')
         .insert({
-          user_id: userData.id,
-          asistencia: attending ? 'asistire' : 'no_asistire',
-          menu: menu,
-          comentario: allergies || ''
+          user_id: user_id,
+          asistencia: asistencia || 'no_confirmado',
+          menu: menu || '',
+          comentario: comentario || ''
         })
         .select()
         .single();
@@ -98,67 +80,74 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === "PUT") {
+    console.log('[API /api/guests] PUT - Iniciando edición');
+    console.log('[API /api/guests] Body recibido:', req.body);
+    console.log('[API /api/guests] Body type:', typeof req.body);
+    
     try {
-      // Editar RSVP existente
-      // - Usuario normal: solo puede editar su propio RSVP (usa su email del JWT)
-      // - Admin: puede editar cualquier RSVP (debe enviar email en el body)
-      const { asistencia, menu, comentario, email } = req.body as any;
+      // Admin solo puede editar el menú, NO la asistencia
+      const { menu, comentario, user_id } = req.body as any;
       
-      if (typeof asistencia !== "boolean" && !menu) {
-        return res.status(400).json({ error: "Datos inválidos (asistencia o menu requeridos)" });
+      console.log('[API /api/guests] Parsed:', { 
+        menu, 
+        comentario, 
+        user_id 
+      });
+      
+      if (!user_id) {
+        console.log('[API /api/guests] user_id requerido');
+        return res.status(400).json({ error: "user_id requerido" });
       }
       
-      // Determinar qué email usar
-      let targetEmail: string;
-      
-      if (user.role === "admin" && email) {
-        // Admin puede especificar el email del invitado a modificar
-        targetEmail = email;
-      } else {
-        // Usuario normal solo puede modificar su propio RSVP
-        targetEmail = user.email;
+      // Validar que al menos menu esté presente
+      if (!menu) {
+        console.log('[API /api/guests] Menu requerido');
+        return res.status(400).json({ error: "Menu requerido" });
       }
       
-      // Buscar el user_id del usuario objetivo
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', targetEmail)
-        .single();
-
-      if (!userData) {
-        return res.status(404).json({ error: "Usuario no encontrado" });
+      // Solo admin puede editar
+      if (user.role !== "admin") {
+        return res.status(403).json({ error: "Solo admin puede editar RSVPs" });
       }
 
-      // Preparar datos de actualización
-      const updateData: any = {};
-      if (typeof asistencia === "boolean") {
-        updateData.asistencia = asistencia ? 'asistire' : 'no_asistire';
-      }
-      if (menu) {
-        updateData.menu = menu;
-      }
+      // Preparar datos de actualización (solo menú y comentario)
+      const updateData: any = {
+        menu: menu
+      };
+      
       if (comentario !== undefined) {
         updateData.comentario = comentario;
       }
 
+      console.log('[API /api/guests] Update data:', updateData);
+      console.log('[API /api/guests] Target user_id:', user_id);
+
       // Actualizar RSVP
-      const { data: updatedRsvp, error } = await supabase
+      const { data: updatedRsvp, error } = await supabaseAdmin
         .from('rsvp')
         .update(updateData)
-        .eq('user_id', userData.id)
+        .eq('user_id', user_id)
         .select()
         .single();
 
+      console.log('[API /api/guests] Supabase response:', { updatedRsvp, error });
+
       if (error) {
-        console.error('Error updating RSVP:', error);
+        console.error('[API /api/guests] Error updating RSVP:', error);
         throw new Error(`Error de Supabase: ${error.message} (${error.code})`);
       }
 
-      return res.json({ ok: true, rsvp: updatedRsvp });
+      if (!updatedRsvp) {
+        console.error('[API /api/guests] No se encontró RSVP para actualizar');
+        return res.status(404).json({ error: "RSVP no encontrado para este usuario" });
+      }
+
+      console.log('[API /api/guests] Success! Returning 200');
+      return res.status(200).json({ ok: true, rsvp: updatedRsvp });
     } catch (error: any) {
-      console.error('PUT /api/guests error:', error);
-      return res.status(500).json({ error: error.message });
+      console.error('[API /api/guests] PUT error:', error);
+      console.error('[API /api/guests] Error stack:', error.stack);
+      return res.status(500).json({ error: error.message || 'Error interno del servidor' });
     }
   }
 
@@ -169,39 +158,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(403).json({ error: "Solo admin puede eliminar invitados" });
       }
       
-      const email = req.body?.email || req.query?.email;
-      if (!email) {
-        return res.status(400).json({ error: "Email requerido" });
-      }
+      // Recibir user_id (UUID)
+      const userId = req.body?.user_id || req.query?.user_id;
       
-      // Buscar el user_id del usuario a eliminar
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (!userData) {
-        return res.status(404).json({ error: "Usuario no encontrado" });
+      if (!userId) {
+        return res.status(400).json({ error: "user_id requerido" });
       }
 
       // Eliminar RSVP
-      const { error: rsvpError } = await supabase
+      const { error: rsvpError } = await supabaseAdmin
         .from('rsvp')
         .delete()
-        .eq('user_id', userData.id);
+        .eq('user_id', userId);
 
       if (rsvpError) throw rsvpError;
 
       // Eliminar usuario
-      const { error: userError } = await supabase
+      const { error: userError } = await supabaseAdmin
         .from('users')
         .delete()
-        .eq('id', userData.id);
+        .eq('id', userId);
 
       if (userError) throw userError;
 
-      return res.status(200).json({ ok: true, message: `Usuario ${email} eliminado` });
+      return res.status(200).json({ ok: true, message: `Usuario eliminado correctamente` });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }

@@ -135,9 +135,8 @@ export default function AdminDashboard() {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          email: invitado.id, // El ID es el email en esta implementación
-          asistencia: editForm.asistencia,
-          menu: editForm.menu,
+          user_id: invitado.id, // ← Envía el UUID directamente
+          menu: editForm.menu, // Solo enviar menú, NO asistencia
         }),
       });
 
@@ -146,15 +145,15 @@ export default function AdminDashboard() {
         throw new Error(errorData.message || 'Error al actualizar');
       }
 
-      // Actualizar estado local
+      // Actualizar estado local (solo menú, asistencia no se modifica)
       setInvitados(prev => prev.map(i =>
         i.id === invitado.id
-          ? { ...i, asistencia: editForm.asistencia ? 'asistire' : 'no_asistire', menu: editForm.menu }
+          ? { ...i, menu: editForm.menu }
           : i
       ));
 
       setEditingId(null);
-      alert('✅ Invitado actualizado correctamente');
+      alert('✅ Menú actualizado correctamente');
     } catch (err: any) {
       alert(`Error: ${err.message}`);
     }
@@ -186,7 +185,7 @@ export default function AdminDashboard() {
           .select('user_id, asistencia, menu, comentario');
         const { data: users } = await supabase
           .from('users')
-          .select('id, nombre, rol');
+          .select('id, nombre, rol');  // ← Sin email porque no existe en la tabla
         // Unir RSVP y users
         const invitados = (users || []).filter(u => u.rol === 'invitado').map(u => {
           const rsvp = (rsvps || []).find(r => r.user_id === u.id);
@@ -309,18 +308,8 @@ export default function AdminDashboard() {
                       <td className="p-2">{i.id}</td>
                       <td className="p-2">{i.rol}</td>
                       <td className="p-2">
-                        {editingId === i.id ? (
-                          <select
-                            value={editForm.asistencia ? 'true' : 'false'}
-                            onChange={(e) => setEditForm({ ...editForm, asistencia: e.target.value === 'true' })}
-                            className="border rounded px-2 py-1"
-                          >
-                            <option value="true">✔️ Asistirá</option>
-                            <option value="false">❌ No asistirá</option>
-                          </select>
-                        ) : (
-                          i.asistencia === 'asistire' ? '✔️' : '❌'
-                        )}
+                        {/* Asistencia NO se puede editar por admin */}
+                        {i.asistencia === 'asistire' ? '✔️ Asistirá' : '❌ No asistirá'}
                       </td>
                       <td className="p-2">
                         {editingId === i.id ? (
