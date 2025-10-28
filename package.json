@@ -22,7 +22,7 @@
     "swr": "2.2.5"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "5.8.1",
+    "@netlify/plugin-nextjs": "5.14.4",
     "@types/jsonwebtoken": "9.0.5",
     "@types/leaflet": "1.9.14",
     "@types/node": "20.14.9",
