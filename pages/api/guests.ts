@@ -1,68 +1,206 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { store } from "./_store";
 import { verifyToken } from "@/lib/auth";
+import { supabase } from "@/lib/supabaseClient";
 
 // Forzar Node.js runtime (necesario para Supabase)
 export const runtime = "nodejs";
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const user = verifyToken<{ email: string }>(req);
   if (!user) return res.status(401).json({ error: "Unauthorized" });
 
   if (req.method === "GET") {
-    // Si es invitado, devolver su RSVP (por email) si existe
-    if (user.role === "invitado") {
-      const guest = store.guests.find(g => g.email === user.email);
-      return res.json({ role: user.role, guest });
+    try {
+      // Si es invitado, devolver su RSVP (por user_id) si existe
+      if (user.role === "invitado") {
+        // Buscar el user_id del invitado por su email
+        const { data: userData } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', user.email)
+          .single();
+
+        if (!userData) {
+          return res.json({ role: user.role, guest: null });
+        }
+
+        // Buscar su RSVP
+        const { data: rsvpData } = await supabase
+          .from('rsvp')
+          .select('*, users!inner(nombre, email)')
+          .eq('user_id', userData.id)
+          .single();
+
+        return res.json({ role: user.role, guest: rsvpData });
+      }
+
+      // prometidos y admin ven todo
+      const { data: allGuests } = await supabase
+        .from('rsvp')
+        .select('*, users!inner(nombre, email, rol)')
+        .order('created_at', { ascending: false });
+
+      return res.json({ role: user.role, guests: allGuests });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
     }
-    // prometidos y admin ven todo
-    return res.json({ role: user.role, guests: store.guests });
   }
 
   if (req.method === "POST") {
-    // Crear RSVP (solo si no existe para ese email)
-    const { name, attending, menu, allergies } = req.body as any;
-    if (!name || typeof attending !== "boolean" || !menu) {
-      return res.status(400).json({ error: "Datos inválidos" });
+    try {
+      // Crear RSVP (solo si no existe para ese email)
+      const { name, attending, menu, allergies } = req.body as any;
+      
+      if (!name || typeof attending !== "boolean" || !menu) {
+        return res.status(400).json({ error: "Datos inválidos" });
+      }
+
+      // Buscar el user_id del usuario actual
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', user.email)
+        .single();
+
+      if (!userData) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      // Verificar si ya existe RSVP
+      const { data: existing } = await supabase
+        .from('rsvp')
+        .select('id')
+        .eq('user_id', userData.id)
+        .single();
+
+      if (existing) {
+        return res.status(409).json({ error: "Ya existe RSVP para este usuario" });
+      }
+
+      // Crear RSVP
+      const { data: newRsvp, error } = await supabase
+        .from('rsvp')
+        .insert({
+          user_id: userData.id,
+          asistencia: attending ? 'asistire' : 'no_asistire',
+          menu: menu,
+          comentario: allergies || ''
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return res.json({ ok: true, rsvp: newRsvp });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
     }
-    // Guardar email del usuario
-    if (store.guests.some(g => g.email === user.email)) {
-      return res.status(409).json({ error: "Ya existe RSVP para este usuario" });
-    }
-    store.guests.push({ name, attending, menu, allergies, email: user.email });
-    return res.json({ ok: true });
   }
 
   if (req.method === "PUT") {
-    // Editar RSVP existente (por email)
-    const { name, attending, menu, allergies } = req.body as any;
-    if (!name || typeof attending !== "boolean" || !menu) {
-      return res.status(400).json({ error: "Datos inválidos" });
+    try {
+      // Editar RSVP existente
+      // - Usuario normal: solo puede editar su propio RSVP (usa su email del JWT)
+      // - Admin: puede editar cualquier RSVP (debe enviar email en el body)
+      const { asistencia, menu, comentario, email } = req.body as any;
+      
+      if (typeof asistencia !== "boolean" && !menu) {
+        return res.status(400).json({ error: "Datos inválidos (asistencia o menu requeridos)" });
+      }
+      
+      // Determinar qué email usar
+      let targetEmail: string;
+      
+      if (user.role === "admin" && email) {
+        // Admin puede especificar el email del invitado a modificar
+        targetEmail = email;
+      } else {
+        // Usuario normal solo puede modificar su propio RSVP
+        targetEmail = user.email;
+      }
+      
+      // Buscar el user_id del usuario objetivo
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', targetEmail)
+        .single();
+
+      if (!userData) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      // Preparar datos de actualización
+      const updateData: any = {};
+      if (typeof asistencia === "boolean") {
+        updateData.asistencia = asistencia ? 'asistire' : 'no_asistire';
+      }
+      if (menu) {
+        updateData.menu = menu;
+      }
+      if (comentario !== undefined) {
+        updateData.comentario = comentario;
+      }
+
+      // Actualizar RSVP
+      const { data: updatedRsvp, error } = await supabase
+        .from('rsvp')
+        .update(updateData)
+        .eq('user_id', userData.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return res.json({ ok: true, rsvp: updatedRsvp });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
     }
-    const idx = store.guests.findIndex(g => g.email === user.email);
-    if (idx === -1) return res.status(404).json({ error: "No existe RSVP para este usuario" });
-    store.guests[idx] = { ...store.guests[idx], name, attending, menu, allergies };
-    return res.json({ ok: true });
   }
 
   if (req.method === "DELETE") {
-    // Solo admin puede eliminar invitados
-    if (user.role !== "admin") {
-      return res.status(403).json({ error: "Solo admin puede eliminar invitados" });
+    try {
+      // Solo admin puede eliminar invitados
+      if (user.role !== "admin") {
+        return res.status(403).json({ error: "Solo admin puede eliminar invitados" });
+      }
+      
+      const email = req.body?.email || req.query?.email;
+      if (!email) {
+        return res.status(400).json({ error: "Email requerido" });
+      }
+      
+      // Buscar el user_id del usuario a eliminar
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+      if (!userData) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      // Eliminar RSVP
+      const { error: rsvpError } = await supabase
+        .from('rsvp')
+        .delete()
+        .eq('user_id', userData.id);
+
+      if (rsvpError) throw rsvpError;
+
+      // Eliminar usuario
+      const { error: userError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userData.id);
+
+      if (userError) throw userError;
+
+      return res.status(200).json({ ok: true, message: `Usuario ${email} eliminado` });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
     }
-    
-    const email = req.body?.email || req.query?.email;
-    if (!email) {
-      return res.status(400).json({ error: "Email requerido" });
-    }
-    
-    const idx = store.guests.findIndex(g => g.email === email);
-    if (idx === -1) {
-      return res.status(404).json({ error: "Invitado no encontrado" });
-    }
-    
-    store.guests.splice(idx, 1);
-    return res.status(200).json({ ok: true, message: `Invitado ${email} eliminado` });
   }
 
   return res.status(405).end();
