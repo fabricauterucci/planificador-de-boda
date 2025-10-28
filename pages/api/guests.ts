@@ -23,14 +23,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(403).json({ error: "No autorizado" });
       }
 
-      // Devolver todos los RSVPs con JOIN a users
-      const { data: allGuests } = await supabaseAdmin
+      // Obtener todos los RSVPs
+      const { data: rsvps, error: rsvpError } = await supabaseAdmin
         .from('rsvp')
-        .select('*, users!inner(nombre, rol)')
+        .select('*')
         .order('created_at', { ascending: false });
+
+      if (rsvpError) {
+        console.error('[API /api/guests] Error fetching RSVPs:', rsvpError);
+        throw rsvpError;
+      }
+
+      // Obtener todos los usuarios
+      const { data: users, error: usersError } = await supabaseAdmin
+        .from('users')
+        .select('id, nombre, rol');
+
+      if (usersError) {
+        console.error('[API /api/guests] Error fetching users:', usersError);
+        throw usersError;
+      }
+
+      // Combinar RSVPs con datos de usuario
+      const allGuests = (rsvps || []).map(rsvp => {
+        const user = (users || []).find(u => u.id === rsvp.user_id);
+        return {
+          ...rsvp,
+          users: user ? { nombre: user.nombre, rol: user.rol } : null
+        };
+      });
+
+      console.log('[API /api/guests] Guests fetched:', allGuests.length);
 
       return res.json({ role: user.role, guests: allGuests });
     } catch (error: any) {
+      console.error('[API /api/guests] GET error:', error);
       return res.status(500).json({ error: error.message });
     }
   }
