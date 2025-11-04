@@ -23,3 +23,4 @@ Pensado para deploy en **Netlify**.
 - `GET/POST /api/menu`
 - `GET /api/event`
 
+# Force redeploy jue 09 oct 2025 22:33:15 -03

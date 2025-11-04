@@ -6,7 +6,8 @@ Para evitar que tu proyecto de Supabase sea pausado por inactividad, este proyec
 
 ### 1. 🚀 GitHub Actions (Recomendado)
 - **Archivo**: `.github/workflows/keep-supabase-active.yml`
-- **Frecuencia**: Cada domingo a las 10:00 AM UTC
+- **Frecuencia**: Cada 3 días a las 10:00 AM UTC
+- **Endpoints**: Hace ping a REST API y health endpoint
 - **Configuración**:
   1. Sube tu código a GitHub
   2. En tu repositorio, ve a Settings > Secrets and variables > Actions
@@ -46,8 +47,9 @@ Configurar para hacer ping a: `https://dgqgvnqzxkkhcooqcjax.supabase.co/rest/v1/
 
 ## Frecuencias recomendadas:
 - **Mínimo**: Cada 7 días
-- **Recomendado**: Cada 3-4 días
-- **Conservador**: Diario
+- **Recomendado**: Cada 3 días (configuración actual)
+- **Conservador**: Cada 24-48 horas
+- **Óptimo para proyectos pequeños**: Cada 3-4 días
 
 ## Verificar que funciona:
 ```bash
