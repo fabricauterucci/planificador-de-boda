@@ -1,45 +1,226 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { store } from "./_store";
 import { verifyToken } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabaseClient";
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+// Forzar Node.js runtime (necesario para Supabase)
+export const runtime = "nodejs";
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  console.log(`[API /api/guests] ${req.method} request received`);
+  
   const user = verifyToken<{ email: string }>(req);
-  if (!user) return res.status(401).json({ error: "Unauthorized" });
+  if (!user) {
+    console.log('[API /api/guests] Unauthorized - no valid token');
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  
+  console.log(`[API /api/guests] User authenticated: ${user.email} (${user.role})`);
 
   if (req.method === "GET") {
-    // Si es invitado, devolver su RSVP (por email) si existe
-    if (user.role === "invitado") {
-      const guest = store.guests.find(g => g.email === user.email);
-      return res.json({ role: user.role, guest });
+    try {
+      // Solo admin y prometidos pueden ver la lista completa
+      if (user.role !== "admin" && user.role !== "prometidos") {
+        return res.status(403).json({ error: "No autorizado" });
+      }
+
+      // Obtener todos los RSVPs
+      const { data: rsvps, error: rsvpError } = await supabaseAdmin
+        .from('rsvp')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (rsvpError) {
+        console.error('[API /api/guests] Error fetching RSVPs:', rsvpError);
+        throw rsvpError;
+      }
+
+      // Obtener todos los usuarios
+      const { data: users, error: usersError } = await supabaseAdmin
+        .from('users')
+        .select('id, nombre, rol');
+
+      if (usersError) {
+        console.error('[API /api/guests] Error fetching users:', usersError);
+        throw usersError;
+      }
+
+      // Combinar RSVPs con datos de usuario
+      const allGuests = (rsvps || []).map(rsvp => {
+        const user = (users || []).find(u => u.id === rsvp.user_id);
+        return {
+          ...rsvp,
+          users: user ? { nombre: user.nombre, rol: user.rol } : null
+        };
+      });
+
+      console.log('[API /api/guests] Guests fetched:', allGuests.length);
+
+      return res.json({ role: user.role, guests: allGuests });
+    } catch (error: any) {
+      console.error('[API /api/guests] GET error:', error);
+      return res.status(500).json({ error: error.message });
     }
-    // prometidos y admin ven todo
-    return res.json({ role: user.role, guests: store.guests });
   }
 
   if (req.method === "POST") {
-    // Crear RSVP (solo si no existe para ese email)
-    const { name, attending, menu, allergies } = req.body as any;
-    if (!name || typeof attending !== "boolean" || !menu) {
-      return res.status(400).json({ error: "Datos inválidos" });
+    try {
+      // Crear RSVP - Solo admin puede crear desde esta API
+      if (user.role !== "admin") {
+        return res.status(403).json({ error: "Solo admin puede crear invitados desde esta API" });
+      }
+      
+      const { user_id, asistencia, menu, comentario } = req.body as any;
+      
+      if (!user_id) {
+        return res.status(400).json({ error: "user_id requerido" });
+      }
+
+      // Verificar si ya existe RSVP
+      const { data: existing } = await supabaseAdmin
+        .from('rsvp')
+        .select('id')
+        .eq('user_id', user_id)
+        .single();
+
+      if (existing) {
+        return res.status(409).json({ error: "Ya existe RSVP para este usuario" });
+      }
+
+      // Crear RSVP
+      const { data: newRsvp, error } = await supabaseAdmin
+        .from('rsvp')
+        .insert({
+          user_id: user_id,
+          asistencia: asistencia || 'no_confirmado',
+          menu: menu || '',
+          comentario: comentario || ''
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return res.json({ ok: true, rsvp: newRsvp });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
     }
-    // Guardar email del usuario
-    if (store.guests.some(g => g.email === user.email)) {
-      return res.status(409).json({ error: "Ya existe RSVP para este usuario" });
-    }
-    store.guests.push({ name, attending, menu, allergies, email: user.email });
-    return res.json({ ok: true });
   }
 
   if (req.method === "PUT") {
-    // Editar RSVP existente (por email)
-    const { name, attending, menu, allergies } = req.body as any;
-    if (!name || typeof attending !== "boolean" || !menu) {
-      return res.status(400).json({ error: "Datos inválidos" });
+    console.log('[API /api/guests] PUT - Iniciando edición');
+    console.log('[API /api/guests] Body completo:', JSON.stringify(req.body, null, 2));
+    console.log('[API /api/guests] Body type:', typeof req.body);
+    console.log('[API /api/guests] Body keys:', Object.keys(req.body || {}));
+    
+    try {
+      // Admin solo puede editar el menú, NO la asistencia
+      const { menu, comentario, user_id } = req.body as any;
+      
+      console.log('[API /api/guests] Valores extraídos:', { 
+        menu,
+        menuType: typeof menu,
+        comentario,
+        comentarioType: typeof comentario,
+        user_id,
+        userIdType: typeof user_id
+      });
+      
+      if (!user_id) {
+        console.log('[API /api/guests] ❌ user_id está vacío/undefined/null');
+        console.log('[API /api/guests] Body raw:', req.body);
+        return res.status(400).json({ 
+          error: "user_id requerido",
+          received: { menu, comentario, user_id },
+          bodyKeys: Object.keys(req.body || {})
+        });
+      }
+      
+      // Validar que al menos menu esté presente
+      if (!menu) {
+        console.log('[API /api/guests] Menu requerido');
+        return res.status(400).json({ error: "Menu requerido" });
+      }
+      
+      // Solo admin puede editar
+      if (user.role !== "admin") {
+        return res.status(403).json({ error: "Solo admin puede editar RSVPs" });
+      }
+
+      // Preparar datos de actualización (solo menú y comentario)
+      const updateData: any = {
+        menu: menu
+      };
+      
+      if (comentario !== undefined) {
+        updateData.comentario = comentario;
+      }
+
+      console.log('[API /api/guests] Update data:', updateData);
+      console.log('[API /api/guests] Target user_id:', user_id);
+
+      // Actualizar RSVP
+      const { data: updatedRsvp, error } = await supabaseAdmin
+        .from('rsvp')
+        .update(updateData)
+        .eq('user_id', user_id)
+        .select()
+        .single();
+
+      console.log('[API /api/guests] Supabase response:', { updatedRsvp, error });
+
+      if (error) {
+        console.error('[API /api/guests] Error updating RSVP:', error);
+        throw new Error(`Error de Supabase: ${error.message} (${error.code})`);
+      }
+
+      if (!updatedRsvp) {
+        console.error('[API /api/guests] No se encontró RSVP para actualizar');
+        return res.status(404).json({ error: "RSVP no encontrado para este usuario" });
+      }
+
+      console.log('[API /api/guests] Success! Returning 200');
+      return res.status(200).json({ ok: true, rsvp: updatedRsvp });
+    } catch (error: any) {
+      console.error('[API /api/guests] PUT error:', error);
+      console.error('[API /api/guests] Error stack:', error.stack);
+      return res.status(500).json({ error: error.message || 'Error interno del servidor' });
     }
-    const idx = store.guests.findIndex(g => g.email === user.email);
-    if (idx === -1) return res.status(404).json({ error: "No existe RSVP para este usuario" });
-    store.guests[idx] = { ...store.guests[idx], name, attending, menu, allergies };
-    return res.json({ ok: true });
+  }
+
+  if (req.method === "DELETE") {
+    try {
+      // Solo admin puede eliminar invitados
+      if (user.role !== "admin") {
+        return res.status(403).json({ error: "Solo admin puede eliminar invitados" });
+      }
+      
+      // Recibir user_id (UUID)
+      const userId = req.body?.user_id || req.query?.user_id;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "user_id requerido" });
+      }
+
+      // Eliminar RSVP
+      const { error: rsvpError } = await supabaseAdmin
+        .from('rsvp')
+        .delete()
+        .eq('user_id', userId);
+
+      if (rsvpError) throw rsvpError;
+
+      // Eliminar usuario
+      const { error: userError } = await supabaseAdmin
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      if (userError) throw userError;
+
+      return res.status(200).json({ ok: true, message: `Usuario eliminado correctamente` });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
   }
 
   return res.status(405).end();

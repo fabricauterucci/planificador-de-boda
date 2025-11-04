@@ -8,6 +8,10 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# Forzar Node.js runtime para compatibilidad con Supabase
+[functions]
+  node_bundler = "esbuild"
+
 [dev]
   command = "npm run dev"
   port = 3000

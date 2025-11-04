@@ -19,6 +19,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ asistencia: boolean; menu: string }>({ asistencia: false, menu: '' });
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer.')) {
@@ -78,6 +80,91 @@ export default function AdminDashboard() {
     }
   };
 
+  // Función para iniciar edición
+  const handleEditStart = (invitado: any) => {
+    setEditingId(invitado.id);
+    setEditForm({
+      asistencia: invitado.asistencia === 'asistire',
+      menu: invitado.menu || '',
+    });
+  };
+
+  // Función para guardar cambios usando la API /api/guests
+  const handleEditSave = async (invitado: any) => {
+    try {
+      // Intentar obtener token JWT de la API /api/auth/login
+      let token = localStorage.getItem('auth_token');
+      
+      // Si no hay token JWT, necesitamos generarlo
+      if (!token) {
+        const session = await supabase.auth.getSession();
+        const userEmail = session.data.session?.user?.email;
+        
+        if (!userEmail) {
+          alert('No se pudo obtener el email del usuario. Por favor inicia sesión nuevamente.');
+          return;
+        }
+
+        // Generar token JWT usando la API de login
+        const loginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userEmail,
+            password: userEmail, // En tu mock, la password no se valida
+            role: role || 'admin'
+          })
+        });
+
+        if (!loginResponse.ok) {
+          alert('Error al generar token de autenticación');
+          return;
+        }
+
+        const { token: newToken } = await loginResponse.json();
+        token = newToken;
+        if (token) {
+          localStorage.setItem('auth_token', token);
+        }
+      }
+
+      const response = await fetch('/api/guests', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: invitado.id, // ← Envía el UUID directamente
+          menu: editForm.menu, // Solo enviar menú, NO asistencia
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al actualizar');
+      }
+
+      // Actualizar estado local (solo menú, asistencia no se modifica)
+      setInvitados(prev => prev.map(i =>
+        i.id === invitado.id
+          ? { ...i, menu: editForm.menu }
+          : i
+      ));
+
+      setEditingId(null);
+      alert('✅ Menú actualizado correctamente');
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  // Función para cancelar edición
+  const handleEditCancel = () => {
+    setEditingId(null);
+  };
+
+
   // Consulta y suscripción en tiempo real
   useEffect(() => {
     if (role !== 'admin' && role !== 'prometido') return;
@@ -98,7 +185,7 @@ export default function AdminDashboard() {
           .select('user_id, asistencia, menu, comentario');
         const { data: users } = await supabase
           .from('users')
-          .select('id, nombre, rol');
+          .select('id, nombre, rol');  // ← Sin email porque no existe en la tabla
         // Unir RSVP y users
         const invitados = (users || []).filter(u => u.rol === 'invitado').map(u => {
           const rsvp = (rsvps || []).find(r => r.user_id === u.id);
@@ -166,15 +253,6 @@ export default function AdminDashboard() {
       <main className="pt-24 max-w-4xl mx-auto p-4">
         <h1 className="font-display text-2xl mb-6">Dashboard de Invitados</h1>
         
-        {/* Enlaces a herramientas administrativas */}
-        <div className="mb-4 flex gap-2 flex-wrap">
-          <Link href="/admin/users" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 inline-block">
-            Gestionar Usuarios
-          </Link>
-          <Link href="/admin/rsvp-structure" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 inline-block">
-            Verificar Estructura RSVP
-          </Link>
-        </div>
         {loading && <div>Cargando datos...</div>}
         {error && <div className="text-red-600">Error: {error}</div>}
         {!loading && (
@@ -229,24 +307,72 @@ export default function AdminDashboard() {
                       <td className="p-2">{i.nombre}</td>
                       <td className="p-2">{i.id}</td>
                       <td className="p-2">{i.rol}</td>
-                      <td className="p-2">{i.asistencia === 'asistire' ? '✔️' : '❌'}</td>
-                      <td className="p-2">{i.menu}</td>
+                      <td className="p-2">
+                        {/* Asistencia NO se puede editar por admin */}
+                        {i.asistencia === 'asistire' ? '✔️ Asistirá' : '❌ No asistirá'}
+                      </td>
+                      <td className="p-2">
+                        {editingId === i.id ? (
+                          <select
+                            value={editForm.menu}
+                            onChange={(e) => setEditForm({ ...editForm, menu: e.target.value })}
+                            className="border rounded px-2 py-1"
+                          >
+                            <option value="">Seleccionar menú</option>
+                            <option value="Clasico Argentino">Clásico Argentino</option>
+                            <option value="Vegano">Vegano</option>
+                            <option value="Sin TACC">Sin TACC</option>
+                          </select>
+                        ) : (
+                          i.menu || '-'
+                        )}
+                      </td>
                       <td className="p-2">{i.comentario}</td>
                       <td className="p-2">
-                        <button
-                          onClick={() => handleDeleteUser(i.id)}
-                          disabled={deletingUser === i.id || i.rol === 'admin' || i.rol === 'prometido'}
-                          className={`px-3 py-1 rounded text-sm ${
-                            i.rol === 'admin' || i.rol === 'prometido'
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : deletingUser === i.id
-                              ? 'bg-red-300 text-white cursor-wait'
-                              : 'bg-red-500 text-white hover:bg-red-600'
-                          }`}
-                          title={i.rol === 'admin' || i.rol === 'prometido' ? 'No se pueden eliminar usuarios admin o prometidos' : ''}
-                        >
-                          {deletingUser === i.id ? 'Eliminando...' : 'Eliminar'}
-                        </button>
+                        {editingId === i.id ? (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleEditSave(i)}
+                              className="px-3 py-1 rounded text-sm bg-green-500 text-white hover:bg-green-600"
+                            >
+                              💾 Guardar
+                            </button>
+                            <button
+                              onClick={handleEditCancel}
+                              className="px-3 py-1 rounded text-sm bg-gray-500 text-white hover:bg-gray-600"
+                            >
+                              ❌ Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleEditStart(i)}
+                              disabled={i.rol === 'admin'}
+                              className={`px-3 py-1 rounded text-sm ${
+                                i.rol === 'admin'
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                              }`}
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(i.id)}
+                              disabled={deletingUser === i.id || i.rol === 'admin' || i.rol === 'prometido'}
+                              className={`px-3 py-1 rounded text-sm ${
+                                i.rol === 'admin' || i.rol === 'prometido'
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : deletingUser === i.id
+                                  ? 'bg-red-300 text-white cursor-wait'
+                                  : 'bg-red-500 text-white hover:bg-red-600'
+                              }`}
+                              title={i.rol === 'admin' || i.rol === 'prometido' ? 'No se pueden eliminar usuarios admin o prometidos' : ''}
+                            >
+                              {deletingUser === i.id ? 'Eliminando...' : '🗑️ Eliminar'}
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
